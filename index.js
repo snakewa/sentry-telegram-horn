@@ -28,6 +28,7 @@ app.post('/test-horn/:id', textRawParser , function(req, res) {
   var id = req.params.id;
   var url = "https://integram.org/" + id;
   var raw = req.body;
+  console.log(raw);
   var post_json = JSON.stringify({text:raw});
   var stream = require("stream")
   var a = new stream.PassThrough()

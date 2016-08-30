@@ -13,64 +13,58 @@ app.get('/', function(request, response) {
   response.send('OK')
 })
 
-app.post('/horn/:id', function(req, res) {
-  var id = req.params.id;
+
+var request_to_horn = function(id){
   var url = "https://integram.org/" + id;
-  req.pipe(request.post({ url: url},function (error, response, body) {
+  return request.post({ url: url},function (error, response, body) {
       res.statusCode = error ? 500 : 200;
-      res.send(body)
-  }));
+      res.send( body)
+  })
+
+};
+app.post('/direct/:id', function(req, res) {
+  var id = req.params.id;
+  req.pipe( request_to_horn(id) );
 })
 
 var textRawParser = bodyParser.text();
-var jsonParser = bodyParser.json();
 
 app.post('/test-horn/:id', textRawParser , function(req, res) {
   var id = req.params.id;
   var url = "https://integram.org/" + id;
   var raw = req.body;
-  console.log(raw);
   var post_json = JSON.stringify({text:raw});
   var stream = require("stream")
   var a = new stream.PassThrough()
   a.write(post_json)
-  a.end()
 
-  a.pipe(
-    request.post({ url: url},function (error, response, body) {
-        res.statusCode = error ? 500 : 200;
-        res.send(raw)
-    })
-  )
+  a.pipe( request_to_horn(id) )
+  a.end()
 })
 
-app.post('/json-horn/:id', textRawParser , function(req, res) {
+app.post('/horn/:id', textRawParser , function(req, res) {
   var id = req.params.id;
   var url = "https://integram.org/" + id;
   var raw = req.body;
   var json = JSON.parse(raw);
-  //console.log(json);
   var pre;
-  if(json.level=='error'){
+  if(json.level=='error' || json.level=='fatal'){
     pre = "👺 "
   }else if( json.level=='info' ){
     pre = "⭐ "
+  }else if( json.level=='warning' || json.level=='debug' ){
+    pre = "👻 "
   }else{
-    pre = "👻 " + `[${json.level}]`
+    pre = "👻 "
   }
-  var type = json.level;
-  var msg = json.message;
-  var post_json = JSON.stringify({text:`${pre} ${msg} \n ${json.url}`});
+  pre += `[${json.level}]`
+  var msg = json.message ;
+  var link = `${json.url} (${json.project})`
+  var post_json = JSON.stringify({text:`${pre} ${msg} \n ${link}`});
   //console.log(post_json);
   var a = new stream.PassThrough()
   a.write(post_json)
-
-  a.pipe(
-    request.post({ url: url},function (error, response, body) {
-        res.statusCode = error ? 500 : 200;
-        res.send(post_json)
-    })
-  )
+  a.pipe( request_to_horn(id) )
   a.end()
 })
 
